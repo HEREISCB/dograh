@@ -81,8 +81,8 @@ async def health() -> HealthResponse:
         AUTH_PROVIDER,
         DEPLOYMENT_MODE,
         FORCE_TURN_RELAY,
-        TURN_SECRET,
     )
+    from api.routes.turn_credentials import turn_configured
     from api.utils.common import get_backend_endpoints
 
     logger.debug("Health endpoint called")
@@ -93,6 +93,6 @@ async def health() -> HealthResponse:
         backend_api_endpoint=backend_endpoint,
         deployment_mode=DEPLOYMENT_MODE,
         auth_provider=AUTH_PROVIDER,
-        turn_enabled=bool(TURN_SECRET),
+        turn_enabled=turn_configured(),
         force_turn_relay=FORCE_TURN_RELAY,
     )

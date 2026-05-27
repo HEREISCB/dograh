@@ -295,8 +295,9 @@ async def get_public_turn_credentials(session_token: str, request: Request):
         )
         raise HTTPException(status_code=403, detail=f"Domain not allowed: {origin}")
 
-    # Check if TURN is configured
-    if not TURN_SECRET:
+    # Check if TURN is configured (either Cloudflare or local coturn HMAC).
+    from api.routes.turn_credentials import turn_configured
+    if not turn_configured():
         raise HTTPException(
             status_code=503,
             detail="TURN server not configured",
@@ -304,7 +305,7 @@ async def get_public_turn_credentials(session_token: str, request: Request):
 
     try:
         # Use session token as identifier for TURN credentials
-        credentials = generate_turn_credentials(f"embed:{session_token[:16]}")
+        credentials = await generate_turn_credentials(f"embed:{session_token[:16]}")
         return TurnCredentialsResponse(**credentials)
     except Exception as e:
         logger.error(f"Failed to generate TURN credentials for embed session: {e}")

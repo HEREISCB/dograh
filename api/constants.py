@@ -136,6 +136,14 @@ TURN_HOST = os.getenv("TURN_HOST", "localhost")
 TURN_PORT = int(os.getenv("TURN_PORT", "3478"))
 TURN_TLS_PORT = int(os.getenv("TURN_TLS_PORT", "5349"))
 TURN_CREDENTIAL_TTL = int(os.getenv("TURN_CREDENTIAL_TTL", "86400"))
+
+# Cloudflare Realtime TURN. When both are set, generate_turn_credentials()
+# calls Cloudflare's generate-ice-servers API instead of issuing local HMAC
+# credentials. Used for deployments behind HTTPS-only proxies that don't
+# pass UDP (Lightning Studios, Render, Vercel, etc.) where running coturn
+# locally would be useless.
+CLOUDFLARE_TURN_KEY_ID = os.getenv("CLOUDFLARE_TURN_KEY_ID", "")
+CLOUDFLARE_TURN_API_TOKEN = os.getenv("CLOUDFLARE_TURN_API_TOKEN", "")
 # Diagnostic flag: when true, strip all non-relay ICE candidates from the
 # answer SDP so every media path must traverse the TURN server. Use for
 # verifying TURN connectivity end-to-end; expect connection failures if

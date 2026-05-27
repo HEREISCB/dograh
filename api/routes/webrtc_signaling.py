@@ -38,6 +38,7 @@ from api.routes.turn_credentials import (
     TURN_PORT,
     TURN_SECRET,
     generate_turn_credentials,
+    turn_configured,
 )
 from api.services.auth.depends import get_user_ws
 from api.services.pipecat.run_pipeline import run_pipeline_smallwebrtc
@@ -184,26 +185,26 @@ def filter_outbound_sdp(sdp: str) -> str:
     return "\r\n".join(filtered)
 
 
-def get_ice_servers(user_id: Optional[str] = None) -> List[RTCIceServer]:
+async def get_ice_servers(user_id: Optional[str] = None) -> List[RTCIceServer]:
     """Build ICE servers configuration including TURN if configured.
 
     Args:
         user_id: Optional user ID for generating time-limited TURN credentials.
-                 If provided and TURN_SECRET is configured, uses TURN REST API.
+                 If provided and any TURN backend (Cloudflare or local HMAC) is
+                 configured, mints fresh per-user credentials.
 
     Returns:
         List of RTCIceServer configurations for WebRTC peer connection.
     """
     servers: List[RTCIceServer] = [RTCIceServer(urls="stun:stun.l.google.com:19302")]
 
-    # Check if TURN is configured
-    if not TURN_HOST:
-        return servers
-
-    # Use time-limited credentials if TURN_SECRET is configured (recommended)
-    if TURN_SECRET and user_id:
+    # Mint per-user time-limited credentials if a TURN backend is configured.
+    # turn_configured() covers BOTH Cloudflare Realtime TURN and the legacy
+    # local-coturn HMAC path. The old check here was `TURN_SECRET and user_id`
+    # which silently skipped TURN entirely on Cloudflare-only deploys.
+    if turn_configured() and user_id:
         try:
-            credentials = generate_turn_credentials(user_id)
+            credentials = await generate_turn_credentials(user_id)
             servers.append(
                 RTCIceServer(
                     urls=credentials["uris"],
@@ -217,6 +218,10 @@ def get_ice_servers(user_id: Optional[str] = None) -> List[RTCIceServer]:
             return servers
         except Exception as e:
             logger.error(f"Failed to generate TURN credentials: {e}")
+
+    # If no TURN backend is configured, return STUN only.
+    if not TURN_HOST:
+        return servers
 
     # Fallback to static credentials (legacy mode - not recommended for production)
     turn_username = os.getenv("TURN_USERNAME")
@@ -364,7 +369,7 @@ class SignalingManager:
         else:
             # Create new connection using correct SmallWebRTC API
             # Generate ICE servers with time-limited TURN credentials for this user
-            user_ice_servers = get_ice_servers(user_id=str(user.id))
+            user_ice_servers = await get_ice_servers(user_id=str(user.id))
             pc = SmallWebRTCConnection(
                 ice_servers=user_ice_servers, connection_timeout_secs=60
             )

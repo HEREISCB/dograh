@@ -75,9 +75,17 @@ def turn_configured() -> bool:
 async def _cloudflare_turn_credentials(ttl: int) -> dict:
     """Mint short-lived ICE-server credentials from Cloudflare Realtime TURN.
 
-    Cloudflare's response shape is `{"iceServers": {"urls": [...], "username":
-    "...", "credential": "..."}}`. We unpack into dograh's flat shape so the
-    existing browser code doesn't need to change.
+    Cloudflare's response is an ARRAY of ICE-server objects, e.g.::
+
+        {"iceServers": [
+            {"urls": ["stun:stun.cloudflare.com:3478", ...]},
+            {"urls": ["turn:turn.cloudflare.com:3478?transport=udp", ...],
+             "username": "...", "credential": "..."}
+        ]}
+
+    STUN entries have urls only; the TURN entry has the credentials at
+    the same level. We flatten urls across all entries and pick up the
+    first non-empty username/credential we encounter.
     """
     url = CLOUDFLARE_TURN_API_URL.format(key_id=CLOUDFLARE_TURN_KEY_ID)
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -92,21 +100,31 @@ async def _cloudflare_turn_credentials(ttl: int) -> dict:
         resp.raise_for_status()
         body = resp.json()
 
-    ice = body.get("iceServers") or {}
-    raw_urls = ice.get("urls") or []
-    if isinstance(raw_urls, str):
-        raw_urls = [raw_urls]
-    username = ice.get("username") or ""
-    credential = ice.get("credential") or ""
+    ice_servers = body.get("iceServers")
+    if not isinstance(ice_servers, list) or not ice_servers:
+        raise RuntimeError(f"Cloudflare returned unexpected payload: {body!r}")
 
-    if not raw_urls or not username or not credential:
+    all_urls: list[str] = []
+    username = ""
+    credential = ""
+    for srv in ice_servers:
+        urls = srv.get("urls") or []
+        if isinstance(urls, str):
+            urls = [urls]
+        all_urls.extend(urls)
+        if srv.get("username") and not username:
+            username = srv["username"]
+        if srv.get("credential") and not credential:
+            credential = srv["credential"]
+
+    if not all_urls or not username or not credential:
         raise RuntimeError(f"Cloudflare returned unexpected payload: {body!r}")
 
     return {
         "username": username,
         "password": credential,
         "ttl": ttl,
-        "uris": list(raw_urls),
+        "uris": all_urls,
     }
 
 

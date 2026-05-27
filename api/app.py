@@ -89,25 +89,31 @@ app = FastAPI(
 
 
 # Configure CORS.
-# OSS is typically deployed with UI and API behind a single reverse proxy
-# (same-origin, so CORS does not apply). Keep it permissive without
-# credentials — wildcard + credentials is rejected by browsers and unsafe.
-# SaaS deployments must set CORS_ALLOWED_ORIGINS to an explicit allowlist.
-if DEPLOYMENT_MODE == "oss":
-    cors_origins: list[str] = ["*"]
-    cors_allow_credentials = False
-else:
-    if not CORS_ALLOWED_ORIGINS:
-        raise RuntimeError(
-            "CORS_ALLOWED_ORIGINS must be set to an explicit origin allowlist "
-            "when DEPLOYMENT_MODE != 'oss'"
-        )
+# An explicit CORS_ALLOWED_ORIGINS allowlist always wins, regardless of
+# DEPLOYMENT_MODE. This is required for any deploy where UI and API live
+# on different origins — SaaS (ui.example.com / api.example.com), and OSS
+# installs on platforms like Lightning Studios that expose each port on
+# a separate *.cloudspaces.litng.ai subdomain. Credentials are enabled
+# so the auth-session cookie is accepted across the cross-origin boundary.
+#
+# Without an explicit allowlist, OSS falls back to wildcard-without-
+# credentials (safe when there's a same-origin reverse proxy in front).
+# Non-OSS without an allowlist is a misconfiguration.
+if CORS_ALLOWED_ORIGINS:
     if "*" in CORS_ALLOWED_ORIGINS:
         raise RuntimeError(
             "CORS_ALLOWED_ORIGINS cannot contain '*' with credentialed requests"
         )
-    cors_origins = CORS_ALLOWED_ORIGINS
+    cors_origins: list[str] = CORS_ALLOWED_ORIGINS
     cors_allow_credentials = True
+elif DEPLOYMENT_MODE == "oss":
+    cors_origins = ["*"]
+    cors_allow_credentials = False
+else:
+    raise RuntimeError(
+        "CORS_ALLOWED_ORIGINS must be set to an explicit origin allowlist "
+        "when DEPLOYMENT_MODE != 'oss'"
+    )
 
 app.add_middleware(
     CORSMiddleware,

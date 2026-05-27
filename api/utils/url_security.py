@@ -18,6 +18,24 @@ def validate_user_configured_service_url(
     hosts. SaaS deployments must not allow users to make Dograh infrastructure
     connect to private/internal network locations.
     """
+    # Basic sanity that ALWAYS runs (independent of DEPLOYMENT_MODE).
+    # Without this, a stray tab or trailing newline pasted into the UI sneaks
+    # through to httpx.URL(), which raises `Invalid non-printable ASCII
+    # character in URL, '\t' at position N` deep inside the pipeline only when
+    # a Web Call tries to build the TTS/STT/LLM service. Failing fast at
+    # config-save time turns a mystery-silent-failure into a clear 400.
+    if not url:
+        raise ValueError(f"{field_name} is empty")
+    if url != url.strip():
+        raise ValueError(
+            f"{field_name} has leading or trailing whitespace; please re-type the URL"
+        )
+    if any(not c.isprintable() for c in url):
+        raise ValueError(
+            f"{field_name} contains non-printable characters (tab/newline/etc.); "
+            f"please re-type the URL"
+        )
+
     if DEPLOYMENT_MODE == "oss":
         return
 

@@ -264,7 +264,7 @@ export function AppSidebar() {
               className="notranslate flex items-center gap-2 px-2 text-xl font-bold"
               translate="no"
             >
-              Dograh
+              Velina
               {versionInfo && (
                 <span
                   className="notranslate text-xs font-normal text-muted-foreground"
@@ -277,15 +277,12 @@ export function AppSidebar() {
             {isBehind && latestRelease && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <a
-                    href="https://docs.dograh.com/deployment/update"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md border bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-900 transition-opacity hover:opacity-80 dark:bg-amber-950 dark:text-amber-200"
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-900 dark:bg-amber-950 dark:text-amber-200"
                   >
                     <ArrowUpCircle className="h-3 w-3" />
                     Update
-                  </a>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Latest: {latestRelease} — click to see the update guide</p>

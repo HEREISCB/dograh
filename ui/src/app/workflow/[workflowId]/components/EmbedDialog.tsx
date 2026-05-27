@@ -437,8 +437,8 @@ export function EmbedDialog({
                                                 <ul className="text-sm space-y-2 text-muted-foreground">
                                                     <li>• Add the embed script tag to your page (see below).</li>
                                                     <li>• The widget renders no UI — render your own buttons.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.start()</code> to begin a call.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.end()</code> to end it.</li>
+                                                    <li>• Call <code className="text-xs">window.VelinaWidget.start()</code> to begin a call.</li>
+                                                    <li>• Call <code className="text-xs">window.VelinaWidget.end()</code> to end it.</li>
                                                     <li>• Subscribe to <code className="text-xs">onCallStart</code>, <code className="text-xs">onCallEnd</code>, <code className="text-xs">onStatusChange</code>, <code className="text-xs">onError</code> to drive your UI.</li>
                                                     <li>• <code className="text-xs">start()</code> must run inside a user-gesture handler (click) so the browser grants microphone access.</li>
                                                 </ul>
@@ -453,16 +453,16 @@ export function EmbedDialog({
                                                     <code className="text-blue-800 dark:text-blue-200">{`// Vanilla JS — keep your own state, render however you want
 let callStatus = 'idle';
 
-window.DograhWidget?.onStatusChange((status) => {
+window.VelinaWidget?.onStatusChange((status) => {
   callStatus = status;
   // ...trigger your render here (re-paint DOM, dispatch event, etc.)
 });
 
 document.getElementById('talk-btn').addEventListener('click', () => {
   if (callStatus === 'connected' || callStatus === 'connecting') {
-    window.DograhWidget.end();
+    window.VelinaWidget.end();
   } else {
-    window.DograhWidget.start();
+    window.VelinaWidget.start();
   }
 });`}</code>
                                                 </pre>
@@ -472,12 +472,12 @@ document.getElementById('talk-btn').addEventListener('click', () => {
   const [status, setStatus] = useState('idle');
 
   useEffect(() => {
-    window.DograhWidget?.onStatusChange(setStatus);
+    window.VelinaWidget?.onStatusChange(setStatus);
   }, []);
 
   const isLive = status === 'connected' || status === 'connecting';
   return (
-    <button onClick={() => isLive ? window.DograhWidget.end() : window.DograhWidget.start()}>
+    <button onClick={() => isLive ? window.VelinaWidget.end() : window.VelinaWidget.start()}>
       {/* render anything you want from \`status\` */}
     </button>
   );
@@ -496,8 +496,8 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                                     <li>• Add a div with id=&quot;dograh-inline-container&quot; where you want the widget</li>
                                                     <li>• The widget will render inside this container</li>
                                                     <li>• You have full control over the container&apos;s styling</li>
-                                                    <li>• Call window.DograhWidget.start() to begin the call</li>
-                                                    <li>• Call window.DograhWidget.end() to end the call</li>
+                                                    <li>• Call window.VelinaWidget.start() to begin the call</li>
+                                                    <li>• Call window.VelinaWidget.end() to end the call</li>
                                                 </ul>
                                             </div>
 
@@ -509,10 +509,10 @@ document.getElementById('talk-btn').addEventListener('click', () => {
 
   useEffect(() => {
     // Widget will auto-initialize when script loads
-    window.DograhWidget?.onCallStart(() => {
+    window.VelinaWidget?.onCallStart(() => {
       setIsCallActive(true);
     });
-    window.DograhWidget?.onCallEnd(() => {
+    window.VelinaWidget?.onCallEnd(() => {
       setIsCallActive(false);
     });
   }, []);
@@ -524,7 +524,7 @@ document.getElementById('talk-btn').addEventListener('click', () => {
         {/* Widget renders here */}
       </div>
       <button
-        onClick={() => window.DograhWidget?.start()}
+        onClick={() => window.VelinaWidget?.start()}
         disabled={isCallActive}
       >
         Start Call

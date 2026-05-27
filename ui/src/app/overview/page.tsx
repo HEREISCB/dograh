@@ -19,7 +19,7 @@ export default function OverviewPage() {
                     <CardHeader>
                         <CardTitle className="text-3xl">
                             {isOSSMode ? (
-                                "Welcome to Dograh"
+                                "Welcome to Velina"
                             ) : (
                                 `Welcome${user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!`
                             )}
@@ -83,14 +83,14 @@ export default function OverviewPage() {
                     <CardHeader>
                         <CardTitle>Resources</CardTitle>
                         <CardDescription>
-                            Get help and learn more about Dograh
+                            Get help and learn more about Velina
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="flex flex-wrap gap-4">
                             <Button asChild variant="outline">
                                 <a
-                                    href="https://docs.dograh.com"
+                                    href="#"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
@@ -99,7 +99,7 @@ export default function OverviewPage() {
                             </Button>
                             <Button asChild variant="outline">
                                 <a
-                                    href="https://github.com/dograh-hq/dograh/issues"
+                                    href="#"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >

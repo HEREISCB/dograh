@@ -120,11 +120,32 @@ async def _cloudflare_turn_credentials(ttl: int) -> dict:
     if not all_urls or not username or not credential:
         raise RuntimeError(f"Cloudflare returned unexpected payload: {body!r}")
 
+    # HTTPS-only hosts (Lightning Studios, Render, Fly, etc.) give the server NO
+    # UDP egress — only outbound TCP on 443/80. aiortc's ICE layer keeps ONLY the
+    # FIRST acceptable TURN URI it's handed, and Cloudflare lists the UDP relay
+    # first; aiortc would lock onto that, issue a UDP ALLOCATE that the host can't
+    # send, and gather zero relay candidates (host-only ICE -> "ICE failed").
+    # Filter to TCP-only and surface a plain-TCP URI first so the relay is
+    # allocated over a pure outbound TCP connection (the browser still reaches the
+    # relay over UDP on its own side). Plain turn:...:80?transport=tcp first (no
+    # TLS handshake), turns:...:443?transport=tcp next as a fallback.
+    def _turn_rank(u: str) -> int:
+        if u.startswith("turn:") and "transport=tcp" in u:   # plain TCP
+            return 0
+        if u.startswith("turns:") and "transport=tcp" in u:  # TLS over TCP
+            return 1
+        return 9  # udp / bare / stun — unusable from a UDP-blocked host
+    tcp_uris = sorted([u for u in all_urls if _turn_rank(u) < 9], key=_turn_rank)
+    if not tcp_uris:
+        raise RuntimeError(
+            f"Cloudflare returned no TCP TURN URIs (need one for UDP-blocked hosts): {all_urls!r}"
+        )
+
     return {
         "username": username,
         "password": credential,
         "ttl": ttl,
-        "uris": all_urls,
+        "uris": tcp_uris,
     }
 
 

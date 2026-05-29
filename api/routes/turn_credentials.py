@@ -125,15 +125,20 @@ async def _cloudflare_turn_credentials(ttl: int) -> dict:
     # FIRST acceptable TURN URI it's handed, and Cloudflare lists the UDP relay
     # first; aiortc would lock onto that, issue a UDP ALLOCATE that the host can't
     # send, and gather zero relay candidates (host-only ICE -> "ICE failed").
-    # Filter to TCP-only and surface a plain-TCP URI first so the relay is
-    # allocated over a pure outbound TCP connection (the browser still reaches the
-    # relay over UDP on its own side). Plain turn:...:80?transport=tcp first (no
-    # TLS handshake), turns:...:443?transport=tcp next as a fallback.
+    # Filter to TCP-only and surface the TLS-over-TCP-on-443 relay first: that's
+    # Cloudflare's HTTPS port, the most proxy/firewall-friendly endpoint, and the
+    # one that reliably allocates. (Plain turn:...:3478?transport=tcp is refused by
+    # Cloudflare's TURN listener — ConnectionRefused — so it must NOT win by
+    # position.) The browser still reaches the relay over UDP on its own side.
     def _turn_rank(u: str) -> int:
-        if u.startswith("turn:") and "transport=tcp" in u:   # plain TCP
-            return 0
-        if u.startswith("turns:") and "transport=tcp" in u:  # TLS over TCP
-            return 1
+        if u.startswith("turns:") and "transport=tcp" in u and ":443" in u:
+            return 0  # TLS over TCP on 443 — Cloudflare's HTTPS port, works through proxies
+        if u.startswith("turns:") and "transport=tcp" in u:
+            return 1  # other TLS/TCP (e.g. 5349)
+        if u.startswith("turn:") and "transport=tcp" in u and ":80" in u:
+            return 2  # plain TCP on 80
+        if u.startswith("turn:") and "transport=tcp" in u:
+            return 3  # plain TCP (e.g. 3478) — Cloudflare refuses this; keep last
         return 9  # udp / bare / stun — unusable from a UDP-blocked host
     tcp_uris = sorted([u for u in all_urls if _turn_rank(u) < 9], key=_turn_rank)
     if not tcp_uris:
